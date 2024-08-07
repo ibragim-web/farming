@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кликер Кубов</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to right, #74ebd5, #ACB6E5);
+            color: #333;
+            transition: background 0.3s;
+        }
+        #container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .tab {
+            cursor: pointer;
+            padding: 12px 25px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin: 0 5px;
+            background: #f0f0f0;
+            font-weight: bold;
+            transition: background 0.3s, color 0.3s, border-color 0.3s;
+        }
+        .tab.active {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+        #cube {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto;
+            cursor: pointer;
+            border-radius: 12px;
+            box-shadow: 0px 0px 20px rgba(0,0,0,0.5);
+            position: relative;
+            transition: background-color 0.3s, transform 0.2s ease-in-out;
+        }
+        #cube.touched {
+            animation: breakCube 0.5s forwards;
+        }
+        @keyframes breakCube {
+            0% {
+                transform: scale(1);
+                background-color: #3498db;
+                box-shadow: 0px 0px 20px rgba(0,0,0,0.5);
+            }
+            50% {
+                transform: scale(0.9);
+                background-color: #2980b9;
+                box-shadow: 0px 0px 10px rgba(0,0,0,0.5);
+            }
+            100% {
+                transform: scale(0.8);
+                background-color: #1f3c72;
+                box-shadow: 0px 0px 5px rgba(0,0,0,0.5);
+                opacity: 0;
+            }
+        }
+        .button {
+            font-size: 18px;
+            padding: 12px 24px;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+            transition: background-color 0.3s, color 0.3s, transform 0.3s;
+            margin: 10px;
+            font-weight: bold;
+        }
+        .button.disabled {
+            background-color: #e74c3c;
+            color: #fff;
+            cursor: not-allowed;
+        }
+        .button.enabled {
+            background-color: #2ecc71;
+            color: #fff;
+        }
+        .info, .upgrade-info {
+            margin-top: 20px;
+        }
+        .info div, .upgrade-info div {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        .design-card {
+            display: inline-block;
+            padding: 15px;
+            margin: 10px;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            cursor: pointer;
+            background: #f0f0f0;
+            text-align: center;
+            transition: background 0.3s, border-color 0.3s;
+            position: relative;
+        }
+        .design-card.active {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+        .design-card:hover {
+            background: #ddd;
+        }
+        .design-card .design-info {
+            margin-top: 10px;
+        }
+        @media (max-width: 600px) {
+            #cube {
+                width: 100px;
+                height: 100px;
+            }
+            .button, .design-card {
+                font-size: 16px;
+                padding: 10px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="tabs">
+            <div class="tab active" data-target="clicker">Кликер</div>
+            <div class="tab" data-target="shop">Магазин</div>
+        </div>
+
+        <div id="clicker">
+            <div id="cube"></div>
+            <div class="info">
+                <div>Очки: <span id="points">0</span></div>
+                <div>Здоровье куба: <span id="cubeHealth">100</span></div>
+            </div>
+        </div>
+
+        <div id="shop" style="display: none;">
+            <button class="button" id="buyAutoClicker">Купить авто-кликер (50 очков)</button>
+            <div class="upgrade-info">
+                Авто-кликер: <span id="autoClickerCount">0</span>
+            </div>
+            <button class="button" id="buyUpgrade">Купить улучшение (50 очков)</button>
+            <div class="upgrade-info">
+                Улучшения: <span id="upgradeCount">0</span>
+            </div>
+            <div class="info">
+                <div>Выберите дизайн:</div>
+                <div class="design-card" id="design1" data-cost="100">
+                    <div>Дизайн 1</div>
+                    <div class="design-info">100 очков</div>
+                </div>
+                <div class="design-card" id="design2" data-cost="200">
+                    <div>Дизайн 2</div>
+                    <div class="design-info">200 очков</div>
+                </div>
+                <div class="design-card" id="design3" data-cost="300">
+                    <div>Дизайн 3</div>
+                    <div class="design-info">300 очков</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let points = parseInt(localStorage.getItem('points')) || 0;
+        let cubeHealth = parseInt(localStorage.getItem('cubeHealth')) || 100;
+        let autoClickerCount = parseInt(localStorage.getItem('autoClickerCount')) || 0;
+        let upgradeCount = parseInt(localStorage.getItem('upgradeCount')) || 0;
+        let lastActivity = localStorage.getItem('lastActivity') || Date.now();
+        let currentDesign = localStorage.getItem('currentDesign') || 'design1';
+
+        function updateUI() {
+            document.getElementById('points').textContent = points;
+            document.getElementById('cubeHealth').textContent = cubeHealth;
+            document.getElementById('autoClickerCount').textContent = autoClickerCount;
+            document.getElementById('upgradeCount').textContent = upgradeCount;
+
+            // Обновление цвета куба в зависимости от количества очков
+            const cube = document.getElementById('cube');
+            if (points > 1000) {
+                cube.style.backgroundColor = 'yellow';
+            } else if (points > 100) {
+                cube.style.backgroundColor = 'red';
+            } else {
+                cube.style.backgroundColor = 'blue';
+            }
+
+            if (points >= 10000) {
+                cubeHealth = 2000; // Устанавливаем здоровье куба на 2000 при достижении 10000 очков
+            } else {
+                cubeHealth = 100; // Сброс здоровья куба для значений меньше 10000
+            }
+
+            document.getElementById('cubeHealth').textContent = cubeHealth;
+
+            const autoClickerButton = document.getElementById('buyAutoClicker');
+            const upgradeButton = document.getElementById('buyUpgrade');
+
+            if (points >= 50) {
+                autoClickerButton.classList.add('enabled');
+                autoClickerButton.classList.remove('disabled');
+            } else {
+                autoClickerButton.classList.add('disabled');
+                autoClickerButton.classList.remove('enabled');
+            }
+
+            if (points >= 50) {
+                upgradeButton.classList.add('enabled');
+                upgradeButton.classList.remove('disabled');
+            } else {
+                upgradeButton.classList.add('disabled');
+                upgradeButton.classList.remove('enabled');
+            }
+
+            // Обновление карточек дизайнов
+            document.querySelectorAll('.design-card').forEach(card => {
+                const cost = parseInt(card.getAttribute('data-cost'));
+                if (points >= cost) {
+                    card.classList.add('enabled');
+                    card.classList.remove('disabled');
+                } else {
+                    card.classList.add('disabled');
+                    card.classList.remove('enabled');
+                }
+                if (card.id === currentDesign) {
+                    card.classList.add('active');
+                } else {
+                    card.classList.remove('active');
+                }
+            });
+        }
+
+        function applyDesign(design) {
+            const designs = {
+                'design1': 'linear-gradient(to right, #74ebd5, #ACB6E5)',
+                'design2': 'linear-gradient(to right, #ff9a9e, #fad0c4)',
+                'design3': 'linear-gradient(to right, #ffb347, #ffcc33)'
+            };
+            document.body.style.background = designs[design];
+        }
+
+        function saveState() {
+            localStorage.setItem('points', points);
+            localStorage.setItem('cubeHealth', cubeHealth);
+            localStorage.setItem('autoClickerCount', autoClickerCount);
+            localStorage.setItem('upgradeCount', upgradeCount);
+            localStorage.setItem('lastActivity', Date.now());
+            localStorage.setItem('currentDesign', currentDesign);
+        }
+
+        function handleCubeClick() {
+            document.getElementById('cube').classList.add('touched');
+            setTimeout(() => document.getElementById('cube').classList.remove('touched'), 500);
+
+            if (cubeHealth <= 0) {
+                points += 10;
+                cubeHealth = (points >= 10000) ? 2000 : 100; // Обновление здоровья куба в зависимости от очков
+                saveState();
+                updateUI();
+            } else {
+                cubeHealth -= (1 + autoClickerCount + upgradeCount * 2); // Урон с учетом авто-кликера и улучшений
+                if (cubeHealth <= 0) {
+                    points += 10;
+                    cubeHealth = (points >= 10000) ? 2000 : 100; // Обновление здоровья куба в зависимости от очков
+                }
+                saveState();
+                updateUI();
+            }
+        }
+
+        document.getElementById('cube').addEventListener('click', handleCubeClick);
+
+        document.getElementById('buyAutoClicker').addEventListener('click', () => {
+            if (points >= 50) {
+                points -= 50;
+                autoClickerCount += 1;
+                saveState();
+                updateUI();
+            }
+        });
+
+        document.getElementById('buyUpgrade').addEventListener('click', () => {
+            if (points >= 50) {
+                points -= 50;
+                upgradeCount += 1;
+                saveState();
+                updateUI();
+            }
+        });
+
+        document.querySelectorAll('.design-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const cost = parseInt(card.getAttribute('data-cost'));
+                if (points >= cost) {
+                    points -= cost;
+                    currentDesign = card.id;
+                    applyDesign(currentDesign);
+                    saveState();
+                    updateUI();
+                }
+            });
+        });
+
+        function autoClick() {
+            if (cubeHealth > 0) {
+                cubeHealth -= (1 + autoClickerCount + upgradeCount * 2);
+                if (cubeHealth <= 0) {
+                    points += 10;
+                    cubeHealth = (points >= 10000) ? 2000 : 100;
+                }
+                saveState();
+                updateUI();
+            }
+        }
+
+        // Автоматический кликер
+        setInterval(autoClick, 1000);
+
+        // Tabs functionality
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('#clicker, #shop').forEach(section => section.style.display = 'none');
+                document.querySelector(`#${tab.dataset.target}`).style.display = 'block';
+                tab.classList.add('active');
+            });
+        });
+
+        // Восстановление состояния после 2 часов
+        function checkForIdleTime() {
+            const now = Date.now();
+            const idleDuration = now - lastActivity;
+            if (idleDuration >= 2 * 60 * 60 * 1000) { // 2 часа в миллисекундах
+                points += Math.floor(idleDuration / (2 * 60 * 60 * 1000)) * 10;
+                saveState();
+                updateUI();
+            }
+        }
+        
+        checkForIdleTime();
+
+        // Инициализация
+        applyDesign(currentDesign); // Применение текущего дизайна
+        updateUI();
+    </script>
+</body>
+</html>
